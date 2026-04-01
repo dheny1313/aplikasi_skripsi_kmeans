@@ -92,7 +92,7 @@
                                 <a href="{{ route('admin.score.show', $item->id) }}" class="btn btn-sm btn-info text-white px-3 shadow-sm d-flex align-items-center">
                                     🔍 Detail
                                 </a>
-                                
+
                                 <a href="{{ route('admin.score.edit', $item->id) }}" class="btn btn-sm btn-primary px-3 shadow-sm d-flex align-items-center" style="background-color: #4f46e5; border: none;">
                                     ✏️ Edit
                                 </a>
@@ -135,6 +135,16 @@
                         Kolom berikutnya gunakan <b>Kode Kriteria</b> (cth: C1, C2).<br>
                         <i>Isi dengan angka skala 1 sampai 5.</i><br><br>
                         Contoh Header: | <b>nis</b> | <b>c1</b> | <b>c2</b> |
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-bold">Data Ini Milik Guru Siapa?</label>
+                        <select name="teacher_id" class="form-select border-success">
+                            <option value="">-- Import Sebagai Admin (Diri Saya Sendiri) --</option>
+                            @foreach($teachers as $teacher)
+                                <option value="{{ $teacher->id }}">👨‍🏫 {{ $teacher->name }}</option>
+                            @endforeach
+                        </select>
+                        <small class="text-success mt-1 d-block"><i>* Pilih nama guru jika Anda mengunggah file ini mewakili mereka.</i></small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label text-muted fw-semibold">Pilih File Nilai (.xlsx)</label>

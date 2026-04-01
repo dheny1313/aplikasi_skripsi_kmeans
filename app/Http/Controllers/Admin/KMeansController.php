@@ -11,22 +11,39 @@ use App\Services\KMeansService;
 use App\Services\DBIService;
 use App\Services\ElbowService;
 use Illuminate\Support\Facades\DB;
+use App\Models\Criterion;
 use App\Models\User;
 
 class KMeansController extends Controller
 {
-    //
-    // 1. Menampilkan Halaman Utama K-Means (Form Input K & Tombol Elbow)
-    public function index()
+    // 1. Menampilkan Halaman Utama K-Means
+   // 1. Menampilkan Halaman Utama K-Means (Dengan Filter)
+    public function index(Request $request)
     {
-        // Ambil riwayat perhitungan sebelumnya (jika ada)
-        $logs = CalculationLog::orderBy('created_at', 'desc')->get();
+        $query = CalculationLog::query();
+
+        // Filter Berdasarkan Tanggal Ditetapkan
+        if ($request->filled('date')) {
+            $query->whereDate('created_at', $request->date);
+        }
+
+        // Filter Berdasarkan Jumlah Klaster (K)
+        if ($request->filled('k_value')) {
+            $query->where('k_value', $request->k_value);
+        }
+
+        // Ambil riwayat perhitungan dengan pagination (10 per halaman)
+        $logs = $query->orderBy('created_at', 'desc')->paginate(10)->withQueryString();
+
         return view('admin.kmeans.index', compact('logs'));
     }
 
-    // 2. Fungsi Bantuan: Menarik data siswa & nilai dari Database lalu diubah ke Array
+    // 2. Fungsi Bantuan: Menarik data, agregasi Multi-Rater, dan Filter Ketat
     private function getFormattedDataset()
     {
+        // Kunci Pertahanan: Hitung ada berapa kriteria yang wajib diisi
+        $totalCriteria = Criterion::count();
+
         $students = Student::with(['scores.criterion'])
             ->where('is_active', true)
             ->whereHas('scores')
@@ -34,58 +51,61 @@ class KMeansController extends Controller
 
         $dataset = [];
         foreach ($students as $student) {
-            $dataset[$student->id] = [];
-
-            // Kita kumpulkan semua nilai dari berbagai guru ke dalam satu array sementara
             $tempScores = [];
+
+            // Kumpulkan nilai dari banyak guru
             foreach ($student->scores as $score) {
-                $code = $score->criterion->code;
-                if (!isset($tempScores[$code])) {
-                    $tempScores[$code] = [];
+                if ($score->criterion) {
+                    $code = $score->criterion->code;
+                    if (!isset($tempScores[$code])) {
+                        $tempScores[$code] = [];
+                    }
+                    $tempScores[$code][] = $score->score;
                 }
-                $tempScores[$code][] = $score->score; // Masukkan nilai dari guru A, B, dst.
             }
 
-            // Hitung rata-ratanya untuk masing-masing kriteria
-            foreach ($tempScores as $code => $scoresArray) {
-                // array_sum / count = Rumus Rata-rata (Mean)
-                $dataset[$student->id][$code] = array_sum($scoresArray) / count($scoresArray);
+            // FILTER KETAT: Hanya proses siswa yang SEMUA kriterianya sudah memiliki nilai minimal 1
+            if (count($tempScores) === $totalCriteria && $totalCriteria > 0) {
+                $dataset[$student->id] = [];
+
+                // Hitung rata-rata (Agregasi Multi-Rater)
+                foreach ($tempScores as $code => $scoresArray) {
+                    $dataset[$student->id][$code] = array_sum($scoresArray) / count($scoresArray);
+                }
             }
         }
 
         return $dataset;
     }
 
-    // 3. API untuk mengeksekusi Elbow Method (Dipanggil via AJAX untuk Grafik)
+    // 3. API Eksekusi Elbow Method (Untuk Grafik AJAX)
     public function runElbow()
     {
         $dataset = $this->getFormattedDataset();
 
         if (count($dataset) < 3) {
-            return response()->json(['error' => 'Data siswa yang sudah dinilai minimal harus 3 orang untuk menjalankan Elbow.'], 400);
+            return response()->json(['error' => 'Data siswa (dengan nilai lengkap) minimal harus 3 orang untuk menjalankan Elbow.'], 400);
         }
 
         $elbowService = new ElbowService();
-        $results = $elbowService->analyze($dataset, 10); // Maksimal simulasi K=10
+        $results = $elbowService->analyze($dataset, 10);
 
         return response()->json($results);
     }
 
-    // 4. Proses Inti: Eksekusi K-Means, Validasi DBI, dan SIMPAN ke Database
+    // 4. Proses Inti: Eksekusi K-Means, Validasi DBI, dan SIMPAN
     public function calculate(Request $request)
     {
         $request->validate([
-            'k_value' => 'required|integer|min:2' // K minimal 2
+            'k_value' => 'required|integer|min:2'
         ]);
 
         $k = $request->k_value;
         $dataset = $this->getFormattedDataset();
 
         if (count($dataset) < $k) {
-            return redirect()->back()->withErrors(['Jumlah siswa yang sudah dinilai lebih sedikit dari jumlah Klaster (K). Input lebih banyak nilai siswa terlebih dahulu.']);
+            return redirect()->back()->withErrors(['Jumlah siswa yang nilainya sudah LENGKAP lebih sedikit dari jumlah Klaster (K). Pastikan guru-guru sudah melengkapi semua kriteria siswa.']);
         }
-
-        // --- MULAI PROSES ALGORITMA ---
 
         // A. Panggil Mesin K-Means
         $kmeans = new KMeansService($k, $dataset);
@@ -95,24 +115,20 @@ class KMeansController extends Controller
         $dbi = new DBIService();
         $dbiScore = $dbi->evaluate($dataset, $clusterResult['final_clusters'], $clusterResult['final_centroids']);
 
-        // --- PROSES SIMPAN KE DATABASE (Aman dengan Transaction) ---
-        // --- PROSES SIMPAN KE DATABASE (Aman dengan Transaction) ---
         DB::beginTransaction();
         try {
             // 1. Simpan Log Induk
-            // 1. Simpan Log Induk (Sesuai dengan Model Anda)
             $log = CalculationLog::create([
-                'user_id' => auth()->id(), // Menyimpan ID Admin yang mengeksekusi
+                'user_id' => auth()->id(),
                 'k_value' => $k,
                 'dbi_score' => $dbiScore,
                 'total_iterations' => $clusterResult['total_iterations'],
                 'description' => 'Perhitungan K-Means dengan K=' . $k,
             ]);
 
-            // Ambil detail nama & NIS siswa untuk dibekukan ke dalam snapshot
             $studentsData = Student::whereIn('id', array_keys($dataset))->get()->keyBy('id');
 
-            // 2. Simpan Hasil Detail Siswanya (Berdasarkan Model Anda)
+            // 2. Simpan Hasil Detail Siswa
             foreach ($clusterResult['final_clusters'] as $clusterIndex => $studentIds) {
                 $clusterNumber = $clusterIndex + 1;
 
@@ -122,7 +138,6 @@ class KMeansController extends Controller
                     CalculationResult::create([
                         'calculation_log_id' => $log->id,
                         'cluster_number' => $clusterNumber,
-                        // Simpan data mentah siswa saat ini sebagai riwayat abadi
                         'snapshot_data' => [
                             'student_id' => $studentInfo->id,
                             'nis' => $studentInfo->student_id,
@@ -134,24 +149,18 @@ class KMeansController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('admin.kmeans.result', $log->id)->with('success', 'Perhitungan K-Means berhasil dan data telah disimpan!');
+            return redirect()->route('admin.kmeans.result', $log->id)->with('success', 'Perhitungan K-Means berhasil dieksekusi dan disimpan!');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->withErrors(['Terjadi kesalahan saat menyimpan ke database: ' . $e->getMessage()]);
         }
     }
 
-    // 5. Menampilkan Halaman Hasil Detail (Iterasi & Anggota Klaster)
     // 5. Menampilkan Halaman Hasil Detail
     public function showResult($log_id)
     {
-        // Hapus 'results.student', cukup 'results' saja
         $log = CalculationLog::with('results')->findOrFail($log_id);
-
-        //$history = json_decode($log->history_snapshot, true) ?? [];
-        // Kita set array kosong karena tabel Anda tidak menyimpan riwayat iterasi
         $history = [];
-
         return view('admin.kmeans.result', compact('log', 'history'));
     }
 }

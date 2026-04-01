@@ -53,6 +53,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
     Route::get('/kmeans/elbow', [\App\Http\Controllers\Admin\KMeansController::class, 'runElbow'])->name('admin.kmeans.elbow'); // API untuk Grafik
     Route::post('/kmeans/calculate', [\App\Http\Controllers\Admin\KMeansController::class, 'calculate'])->name('admin.kmeans.calculate');
     Route::get('/kmeans/result/{id}', [\App\Http\Controllers\Admin\KMeansController::class, 'showResult'])->name('admin.kmeans.result');
+
+
+    // --- MANAJEMEN LAPORAN ---
+    Route::get('/report', [\App\Http\Controllers\Admin\ReportController::class, 'index'])->name('admin.report.index');
+    Route::get('/report/{log_id}/excel', [\App\Http\Controllers\Admin\ReportController::class, 'exportExcel'])->name('admin.report.excel');
+    Route::get('/report/{log_id}/pdf', [\App\Http\Controllers\Admin\ReportController::class, 'exportPdf'])->name('admin.report.pdf');
 });
 
 // -------------------------------------------------------------------
@@ -68,9 +74,11 @@ Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function (
     })->name('teacher.dashboard');
 
     // Nanti route input nilai siswa kita taruh di sini
-
     // Rute Manajemen Nilai Siswa
     Route::get('/score', [\App\Http\Controllers\Teacher\ScoreController::class, 'index'])->name('teacher.score.index');
     Route::get('/score/{student_id}', [\App\Http\Controllers\Teacher\ScoreController::class, 'edit'])->name('teacher.score.edit');
     Route::put('/score/{student_id}', [\App\Http\Controllers\Teacher\ScoreController::class, 'update'])->name('teacher.score.update');
+    // --- Laporan K-Means (Hanya Baca) ---
+    Route::get('/kmeans', [\App\Http\Controllers\Teacher\KMeansController::class, 'index'])->name('teacher.kmeans.index');
+    Route::get('/kmeans/result/{log_id}', [\App\Http\Controllers\Teacher\KMeansController::class, 'showResult'])->name('teacher.kmeans.result');
 });

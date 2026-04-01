@@ -3,43 +3,63 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Imports\SCoreImport;
 use Illuminate\Http\Request;
 use App\Models\Student;
 use App\Models\Criterion;
 use App\Models\StudentScore;
-use App\Imports\ScoreImport;
 use Maatwebsite\Excel\Facades\Excel;
 
 class ScoreController extends Controller
 {
     //
-    // 1. Halaman Index Admin (Menampilkan Tabel Siswa & Status Nilai)
-   public function index(Request $request)
+    public function index(Request $request)
     {
         $totalCriteria = Criterion::count();
         $query = Student::where('is_active', true);
 
-        // 1. Filter Pencarian Nama/NIS
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('student_id', 'like', "%{$search}%")
-                  ->orWhere('name', 'like', "%{$search}%");
+                    ->orWhere('name', 'like', "%{$search}%");
             });
         }
 
-        // 2. Filter Status Penilaian (Khusus Admin: Cek apakah sudah dinilai SIAPAPUN)
         if ($request->filled('status')) {
             if ($request->status == 'belum') {
-                $query->doesntHave('scores'); // Belum ada nilai sama sekali
+                $query->doesntHave('scores');
             } elseif ($request->status == 'sudah') {
-                $query->has('scores'); // Sudah dinilai minimal oleh 1 guru
+                $query->has('scores');
             }
         }
 
         $students = $query->with('scores')->orderBy('name', 'asc')->paginate(15)->withQueryString();
 
-        return view('admin.score.index', compact('students', 'totalCriteria'));
+        // TAMBAHKAN INI: Ambil data guru aktif untuk dropdown di Modal Import Excel
+        $teachers = \App\Models\User::where('role', 'teacher')->where('is_active', true)->orderBy('name', 'asc')->get();
+
+        // Jangan lupa tambahkan $teachers ke compact()
+        return view('admin.score.index', compact('students', 'totalCriteria', 'teachers'));
+    }
+
+    // Sesuaikan method import untuk menangkap dan mengoper teacher_id
+    public function import(Request $request)
+    {
+        // Validasi disesuaikan dengan nama input di form (file_excel)
+        $request->validate([
+            'file_excel' => 'required|mimes:xlsx,xls,csv',
+            'teacher_id' => 'nullable|exists:users,id'
+        ]);
+
+        try {
+            // Panggil file-nya menggunakan nama 'file_excel'
+            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\SCoreImport($request->teacher_id), $request->file('file_excel'));
+
+            return redirect()->back()->with('success', 'Data nilai berhasil diimpor!');
+        } catch (\Exception $e) {
+            return redirect()->back()->withErrors(['Terjadi kesalahan saat import: ' . $e->getMessage()]);
+        }
     }
 
     // Menampilkan Detail Siapa Saja Guru yang Menilai Siswa Ini
@@ -66,16 +86,16 @@ class ScoreController extends Controller
         $criteria = Criterion::with('scales')->orderBy('code', 'asc')->get();
 
         $scores = StudentScore::with('teacher')
-                    ->where('student_id', $student->id)
-                    ->get();
+            ->where('student_id', $student->id)
+            ->get();
 
         $scoresByTeacher = $scores->groupBy('teacher_id');
 
         // Panggil semua daftar akun pengguna (Guru) selain Admin yang sedang login
         $teachers = \App\Models\User::where('id', '!=', auth()->id())
-        ->where('is_active', true) // TAMBAHKAN BARIS INI
-        ->orderBy('name', 'asc')
-        ->get();
+            ->where('is_active', true) // TAMBAHKAN BARIS INI
+            ->orderBy('name', 'asc')
+            ->get();
 
         return view('admin.score.form', compact('student', 'criteria', 'scoresByTeacher', 'teachers'));
     }
@@ -131,20 +151,5 @@ class ScoreController extends Controller
         }
 
         return redirect()->route('admin.score.show', $student->id)->with('success', 'Data nilai berhasil diperbarui dan didelegasikan!');
-    }
-
-    // 4. Proses Import Excel Massal
-    public function import(Request $request)
-    {
-        $request->validate([
-            'file_excel' => 'required|mimes:xlsx,xls,csv|max:2048'
-        ]);
-
-        try {
-            Excel::import(new ScoreImport, $request->file('file_excel'));
-            return redirect()->back()->with('success', 'Data nilai massal berhasil diimpor!');
-        } catch (\Exception $e) {
-            return redirect()->back()->withErrors(['Terjadi kesalahan: ' . $e->getMessage()]);
-        }
     }
 }

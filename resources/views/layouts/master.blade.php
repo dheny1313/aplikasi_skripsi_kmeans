@@ -117,11 +117,12 @@
                     <li><a href="{{ route('admin.criteria.index') }}" class="{{ request()->routeIs('admin.criteria.*') ? 'active' : '' }}">📊 Master Kriteria</a></li>
                     <li><a href="{{ route('admin.score.index') }}" class="{{ request()->routeIs('admin.score.*') ? 'active' : '' }}">📝 Manajemen Nilai</a></li>
                     <li><a href="{{ route('admin.kmeans.index') }}" class="{{ request()->routeIs('admin.kmeans.*') ? 'active' : '' }}">⚙️ Eksekusi K-Means</a></li>
-                    <li><a href="#">📈 Riwayat Laporan</a></li>
+                    <li><a href="{{ route('admin.report.index') }}" class="{{ request()->routeIs('admin.report.*') ? 'active' : '' }}">📄 Cetak Laporan</a></li>
                 @elseif(Auth::check() && Auth::user()->role === 'teacher')
                     <li><a href="{{ route('teacher.dashboard') }}" class="{{ request()->routeIs('teacher.dashboard') ? 'active' : '' }}">🏠 Dashboard</a></li>
                     <li><a href="{{ route('teacher.score.index') }}">📝 Input Nilai Siswa</a></li>
-                    <li><a href="#">📈 Laporan Klaster</a></li>
+                    <li><a href="{{ route('teacher.kmeans.index') }}" class="{{ request()->routeIs('teacher.kmeans.*') ? 'active' : '' }}">📊 Laporan Klastering</a></li>
+
                 @endif
 
             </ul>

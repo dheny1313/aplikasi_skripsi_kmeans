@@ -53,15 +53,29 @@ class KMeansService
 
     protected function initializeCentroids()
     {
+        // 1. Ambil semua ID siswa
         $studentIds = array_keys($this->dataset);
-        shuffle($studentIds);
-        $selectedIds = array_slice($studentIds, 0, $this->k);
 
-        foreach ($selectedIds as $index => $id) {
-            $this->centroids[$index] = $this->dataset[$id];
+        // 2. KUNCI PERTAMA: Urutkan ID agar daftarnya selalu konsisten setiap kali dieksekusi
+        sort($studentIds);
+
+        // 3. KUNCI KEDUA: Tentukan jarak lompatan untuk memilih Centroid awal
+        // Jika siswa ada 42 dan K=3, maka lompatannya adalah 42/3 = 14
+        $step = max(1, floor(count($studentIds) / $this->k));
+
+        for ($i = 0; $i < $this->k; $i++) {
+            // Ambil siswa pada indeks ke-0, ke-14, dan ke-28 sebagai titik mula
+            $index = $i * $step;
+
+            // Mencegah error jika indeks melebihi jumlah data
+            if ($index >= count($studentIds)) {
+                $index = count($studentIds) - 1;
+            }
+
+            $id = $studentIds[$index];
+            $this->centroids[$i] = $this->dataset[$id];
         }
     }
-
     protected function assignToClusters()
     {
         $this->clusters = array_fill(0, $this->k, []);

@@ -6,11 +6,12 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
 {
     // 1. Menampilkan Daftar Pengguna
-  // 1. Menampilkan Daftar Pengguna (Dengan Filter Canggih)
+    // 1. Menampilkan Daftar Pengguna (Dengan Filter Canggih)
     public function index(Request $request)
     {
         $query = User::query();
@@ -18,9 +19,9 @@ class UserController extends Controller
         // A. Filter Pencarian Teks (Nama atau Email)
         if ($request->filled('search')) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%");
+                    ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
