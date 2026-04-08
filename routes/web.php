@@ -18,11 +18,9 @@ Auth::routes();
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
 
     // URL: domain.com/admin/dashboard
-    Route::get('/dashboard', function () {
-        return view('admin.dashboard');
-    })->name('admin.dashboard');
 
 
+    Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('admin.dashboard');
     // Rute Master Pengguna (User Management)
     Route::resource('user', \App\Http\Controllers\Admin\UserController::class)->except(['show'])->names('admin.user');
 
@@ -66,12 +64,13 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
 // -------------------------------------------------------------------
 Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function () {
 
+Route::get('/dashboard', [\App\Http\Controllers\Teacher\DashboardController::class, 'index'])->name('teacher.dashboard');
     // URL: domain.com/teacher/dashboard
-    Route::get('/dashboard', function () {
-        return view(
-            'teacher.dashboard'
-        );
-    })->name('teacher.dashboard');
+    //Route::get('/dashboard', function () {
+      //  return view(
+        //    'teacher.dashboard'
+        //);
+    //})->name('teacher.dashboard');
 
     // Nanti route input nilai siswa kita taruh di sini
     // Rute Manajemen Nilai Siswa

@@ -32,9 +32,13 @@ class LoginController extends Controller
 
     protected function authenticated(Request $request, $user)
     {
+        // Jika yang login adalah Admin, lempar ke Dashboard Admin
         if ($user->role === 'admin') {
             return redirect()->route('admin.dashboard');
-        } elseif ($user->role === 'teacher') {
+        }
+
+        // Jika yang login adalah Teacher, lempar ke Dashboard Teacher
+        if ($user->role === 'teacher') {
             return redirect()->route('teacher.dashboard');
         }
 

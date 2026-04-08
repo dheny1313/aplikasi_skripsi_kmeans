@@ -76,6 +76,7 @@ class KMeansService
             $this->centroids[$i] = $this->dataset[$id];
         }
     }
+    
     protected function assignToClusters()
     {
         $this->clusters = array_fill(0, $this->k, []);
