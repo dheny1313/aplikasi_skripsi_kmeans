@@ -40,7 +40,7 @@
                                 <div class="d-flex justify-content-between align-items-center">
                                     <label for="password" class="form-label fw-semibold text-secondary small mb-0">Kata Sandi</label>
                                     @if (Route::has('password.request'))
-                                        <a class="text-decoration-none small text-primary fw-semibold" href="{{ route('password.request') }}">Lupa Sandi?</a>
+                                        {{-- <a class="text-decoration-none small text-primary fw-semibold" href="{{ route('password.request') }}">Lupa Sandi?</a> --}}
                                     @endif
                                 </div>
                                 <input id="password" type="password" class="form-control custom-input mt-2 @error('password') is-invalid @enderror" name="password" required autocomplete="current-password" placeholder="••••••••">

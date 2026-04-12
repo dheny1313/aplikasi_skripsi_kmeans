@@ -125,7 +125,7 @@
                 @elseif(Auth::check() && Auth::user()->role === 'teacher')
                     <li><a href="{{ route('teacher.dashboard') }}" class="{{ request()->routeIs('teacher.dashboard') ? 'active' : '' }}">🏠 Dashboard</a></li>
                     <li><a href="{{ route('teacher.score.index') }}">📝 Input Nilai Siswa</a></li>
-                    <li><a href="{{ route('teacher.kmeans.index') }}" class="{{ request()->routeIs('teacher.kmeans.*') ? 'active' : '' }}">📊 Laporan Klastering</a></li>
+                    <li><a href="{{ route('teacher.kmeans.index') }}" class="{{ request()->routeIs('teacher.kmeans.*') ? 'active' : '' }}">📊 Laporan Hasil Klastering</a></li>
 
                 @endif
 

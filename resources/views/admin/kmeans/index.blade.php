@@ -1,6 +1,6 @@
 @extends('layouts.master')
 
-@section('title', 'Eksekusi K-Means & Metode Elbow')
+@section('title', 'Eksekusi K-Means ')
 
 @section('content')
 <div class="row mb-4">
