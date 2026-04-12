@@ -56,9 +56,9 @@
 
                             <button type="submit" class="btn btn-brand w-100 border-0">Masuk Dashboard ➔</button>
 
-                            <div class="text-center mt-4">
+                            {{-- <div class="text-center mt-4">
                                 <span class="text-muted small">Belum punya akun? <a href="{{ route('register') }}" class="text-primary fw-bold text-decoration-none">Daftar sekarang</a></span>
-                            </div>
+                            </div> --}}
                         </form>
                     </div>
                 </div>

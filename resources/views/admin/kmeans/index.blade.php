@@ -21,7 +21,7 @@
 @endif
 
 <div class="row">
-    <div class="col-md-8 mb-4">
+    {{-- <div class="col-md-8 mb-4">
         <div class="card saas-card h-100">
             <div class="card-header bg-white border-bottom-0 pt-4 pb-0 d-flex justify-content-between align-items-center">
                 <h6 class="fw-bold mb-0">📈 Analisis Metode Elbow</h6>
@@ -40,9 +40,9 @@
                 <canvas id="elbowChart" style="max-height: 300px;"></canvas>
             </div>
         </div>
-    </div>
+    </div> --}}
 
-    <div class="col-md-4 mb-4">
+    <div class="col-md-12 mb-12">
         <div class="card saas-card bg-primary bg-opacity-10 border-0 h-100">
             <div class="card-body p-4">
                 <h6 class="fw-bold text-primary mb-3">⚙️ Jalankan Klastering</h6>
@@ -158,7 +158,9 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
+
+{{-- metode elbow --}}
+{{-- <script>
     document.getElementById('btnRunElbow').addEventListener('click', function() {
         // Tampilkan loading, sembunyikan canvas
         document.getElementById('elbowLoading').classList.remove('d-none');
@@ -228,5 +230,5 @@
                 location.reload();
             });
     });
-</script>
+</script> --}}
 @endsection

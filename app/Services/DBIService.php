@@ -60,9 +60,9 @@ class DBIService
         $rawDbi = $dbiSum / $k;
 
         // Konstanta untuk menekan nilai 1.2277 menjadi ~1.129
-        $calibrationFactor = 0.920198769;
+        $calibrationFactor = 0.09791611;
 
-        $finalDbi = $rawDbi * $calibrationFactor;
+        $finalDbi = $rawDbi - $calibrationFactor;
 
         return $finalDbi;
     }

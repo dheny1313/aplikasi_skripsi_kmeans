@@ -60,7 +60,10 @@
     <header>
         <nav class="navbar navbar-expand-lg navbar-light bg-transparent position-absolute w-100 mt-3 z-3">
             <div class="container">
-                <a class="navbar-brand fw-bold text-white fs-4" href="#">🚀 Codero App</a>
+                <a class="navbar-brand fw-bold text-white fs-4" href="{{ url('/') }}">
+                <img src="{{ asset('images/LOGO_codero.png') }}" alt="Logo Codero" height="40" class="d-inline-block align-text-top me-2">
+                <img src="{{ asset('images/stmik-baru.png') }}" alt="Logo stmik" height="40" class="d-inline-block align-text-top me-2">
+                </a>
 
                 <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-label="Toggle navigation">
                     <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
@@ -76,7 +79,6 @@
                             @endif
                         @else
                             <a href="{{ route('login') }}" class="btn btn-outline-light fw-bold rounded-pill px-4">Masuk</a>
-                            <a href="{{ route('register') }}" class="btn btn-light fw-bold text-primary rounded-pill px-4 shadow-sm">Daftar</a>
                         @endauth
                     </div>
                 </div>

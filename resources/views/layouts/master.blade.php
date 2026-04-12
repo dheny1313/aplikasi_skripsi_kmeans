@@ -103,7 +103,11 @@
 
         <div class="sidebar p-3" id="sidebar">
             <div class="text-center mb-4 mt-2">
-                <h4 class="sidebar-brand mb-0">Codero</h4>
+                <a class="navbar-brand fw-bold text-white fs-4" href="{{ url('/') }}">
+                <img src="{{ asset('images/LOGO_codero.png') }}" alt="Logo Codero" height="40" class="d-inline-block align-text-top me-2">
+                <img src="{{ asset('images/stmik-baru.png') }}" alt="Logo stmik" height="40" class="d-inline-block align-text-top me-2">
+                </a>
+                {{-- <h4 class="sidebar-brand mb-0">Codero</h4> --}}
                 <small class="text-muted" style="font-size: 13px; font-weight: 500;">Sistem Pengelompokan</small>
             </div>
 

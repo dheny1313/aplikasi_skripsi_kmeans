@@ -45,8 +45,9 @@
     <div id="app">
         <nav class="navbar navbar-expand-md navbar-light bg-transparent py-3">
             <div class="container">
-                <a class="navbar-brand fs-4" href="{{ url('/') }}">
-                    🚀 Codero
+                 <a class="navbar-brand fw-bold text-white fs-4" href="{{ url('/') }}">
+                <img src="{{ asset('images/LOGO_codero.png') }}" alt="Logo Codero" height="40" class="d-inline-block align-text-top me-2">
+                <img src="{{ asset('images/stmik-baru.png') }}" alt="Logo stmik" height="40" class="d-inline-block align-text-top me-2">
                 </a>
                 <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="{{ __('Toggle navigation') }}">
                     <span class="navbar-toggler-icon"></span>
@@ -64,11 +65,11 @@
                                 </li>
                             @endif
 
-                            @if (Route::has('register'))
+                            {{-- @if (Route::has('register'))
                                 <li class="nav-item">
                                     <a class="nav-link custom-btn text-white shadow-sm" style="background-color: #4f46e5;" href="{{ route('register') }}">{{ __('Daftar') }}</a>
                                 </li>
-                            @endif
+                            @endif --}}
                         @else
                             <li class="nav-item dropdown">
                                 <a id="navbarDropdown" class="nav-link dropdown-toggle fw-bold text-dark" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>
