@@ -17,7 +17,7 @@ use App\Models\User;
 class KMeansController extends Controller
 {
     // 1. Menampilkan Halaman Utama K-Means
-   // 1. Menampilkan Halaman Utama K-Means (Dengan Filter)
+    // 1. Menampilkan Halaman Utama K-Means (Dengan Filter)
     public function index(Request $request)
     {
         $query = CalculationLog::query();
@@ -93,44 +93,50 @@ class KMeansController extends Controller
         return response()->json($results);
     }
 
-    // 4. Proses Inti: Eksekusi K-Means, Validasi DBI, dan SIMPAN
+    // 4. Proses Inti: Eksekusi K-Means via Python, Validasi DBI, dan SIMPAN
     public function calculate(Request $request)
     {
         $request->validate([
-            'k_value' => 'required|integer|min:2'
+            'k_value' => 'required|integer|min:2|max:10'
         ]);
 
         $k = $request->k_value;
+
+        // 1. Ambil data siswa
         $dataset = $this->getFormattedDataset();
 
         if (count($dataset) < $k) {
-            return redirect()->back()->withErrors(['Jumlah siswa yang nilainya sudah LENGKAP lebih sedikit dari jumlah Klaster (K). Pastikan guru-guru sudah melengkapi semua kriteria siswa.']);
+            return redirect()->back()->with('error', 'Jumlah siswa kurang dari nilai K.');
         }
-
-        // A. Panggil Mesin K-Means
-        $kmeans = new KMeansService($k, $dataset);
-        $clusterResult = $kmeans->cluster();
-
-        // B. Panggil Mesin Validasi DBI
-        $dbi = new DBIService();
-        $dbiScore = $dbi->evaluate($dataset, $clusterResult['final_clusters'], $clusterResult['final_centroids']);
 
         DB::beginTransaction();
         try {
-            // 1. Simpan Log Induk
+            // 2. Panggil Mesin Python!
+            $kmeansService = new \App\Services\KMeansService($k, $dataset);
+            $pythonResult = $kmeansService->runPythonEngine();
+
+            // 3. Ekstrak hasil dari Python
+            $clusters = $pythonResult['clusters'];
+            $centroids = $pythonResult['centroids'];
+            $dbiScore = $pythonResult['dbi']; // DBI langsung dapet dari Python!
+            $iterations = $pythonResult['iterations'];
+
+            // 4. Simpan Log Induk
             $log = CalculationLog::create([
                 'user_id' => auth()->id(),
                 'k_value' => $k,
                 'dbi_score' => $dbiScore,
-                'total_iterations' => $clusterResult['total_iterations'],
-                'description' => 'Perhitungan K-Means dengan K=' . $k,
+                'total_iterations' => $iterations,
+                'description' => 'Perhitungan K-Means dengan K=' . $k . ' (Python Engine)',
             ]);
 
             $studentsData = Student::whereIn('id', array_keys($dataset))->get()->keyBy('id');
 
-            // 2. Simpan Hasil Detail Siswa
-            foreach ($clusterResult['final_clusters'] as $clusterIndex => $studentIds) {
-                $clusterNumber = $clusterIndex + 1;
+            // 5. Simpan Hasil Detail Siswa
+            // KUNCI PERBAIKAN: Gunakan $clusters, BUKAN $clusterResult['final_clusters']
+            foreach ($clusters as $clusterIndex => $studentIds) {
+                // Di Python, index mungkin dimulai dari "0", kita +1 agar di web jadi Klaster 1, 2, dst.
+                $clusterNumber = intval($clusterIndex) + 1;
 
                 foreach ($studentIds as $studentId) {
                     $studentInfo = $studentsData[$studentId];
@@ -152,7 +158,7 @@ class KMeansController extends Controller
             return redirect()->route('admin.kmeans.result', $log->id)->with('success', 'Perhitungan K-Means berhasil dieksekusi dan disimpan!');
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->withErrors(['Terjadi kesalahan saat menyimpan ke database: ' . $e->getMessage()]);
+            return redirect()->back()->withErrors(['Terjadi kesalahan sistem: ' . $e->getMessage()]);
         }
     }
 

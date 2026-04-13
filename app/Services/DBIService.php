@@ -2,68 +2,57 @@
 
 namespace App\Services;
 
+use Symfony\Component\Process\Process;
+use Symfony\Component\Process\Exception\ProcessFailedException;
+
 class DBIService
 {
     /**
-     * Mengevaluasi hasil K-Means menggunakan Davies-Bouldin Index
+     * Mengevaluasi hasil K-Means menggunakan Python scikit-learn
      */
-
     public function evaluate(array $dataset, array $clusters, array $centroids)
     {
         $k = count($clusters);
-        if ($k <= 1) return 0; // DBI butuh minimal 2 klaster untuk dibandingkan
+        if ($k <= 1) return 0; // DBI butuh minimal 2 klaster
 
-        $intraClusterDistances = [];
-        $kmeansHelper = new KMeansService(1, []); // Sekadar meminjam fungsi hitung jaraknya
+        // 1. Susun ulang data Laravel agar formatnya disukai Python
+        $X = [];
+        $labels = [];
 
-        // 1. Hitung jarak Intra-cluster (Si) - Kepadatan di dalam klaster
         foreach ($clusters as $clusterIndex => $studentIds) {
-            $centroid = $centroids[$clusterIndex];
-            $totalDistance = 0;
-            $numStudents = count($studentIds);
-
-            if ($numStudents > 0) {
-                foreach ($studentIds as $id) {
-                    $scores = $dataset[$id];
-                    $totalDistance += $kmeansHelper->calculateEuclideanDistance($scores, $centroid);
-                }
-                $intraClusterDistances[$clusterIndex] = $totalDistance / $numStudents;
-            } else {
-                $intraClusterDistances[$clusterIndex] = 0;
+            foreach ($studentIds as $id) {
+                // Ambil nilai fiturnya saja (V1, V2, dst)
+                $X[] = array_values($dataset[$id]);
+                // Catat siswa ini masuk klaster nomor berapa
+                $labels[] = $clusterIndex;
             }
         }
 
-        // 2. Hitung jarak Inter-cluster dan cari rasio maksimum (Rij)
-        $dbiSum = 0;
+        // 2. Tentukan lokasi file Python yang tadi kita buat
+        $pythonScriptPath = storage_path('app/scripts/dbi_calculator.py');
 
-        for ($i = 0; $i < $k; $i++) {
-            $maxRatio = 0;
+        // 3. Bangun perintah untuk menjalankan Python di Terminal/CMD
+        // Format: python lokasi_file.py "[data_X]" "[data_labels]"
+        $process = new Process([
+            'python', // atau 'python3' tergantung settingan environment laptop Anda
+            $pythonScriptPath,
+            json_encode($X),
+            json_encode($labels)
+        ]);
 
-            for ($j = 0; $j < $k; $j++) {
-                if ($i != $j) {
-                    // Jarak antar centroid (Mij)
-                    $centroidDistance = $kmeansHelper->calculateEuclideanDistance($centroids[$i], $centroids[$j]);
+        // Eksekusi perintahnya!
+        $process->run();
 
-                    if ($centroidDistance > 0) {
-                        $ratio = ($intraClusterDistances[$i] + $intraClusterDistances[$j]) / $centroidDistance;
-
-                        if ($ratio > $maxRatio) {
-                            $maxRatio = $ratio;
-                        }
-                    }
-                }
-            }
-            $dbiSum += $maxRatio;
+        // 4. Cek apakah Python mengalami error
+        if (!$process->isSuccessful()) {
+            // Jika Anda melihat angka 0 atau error, cek terminal log
+            // throw new ProcessFailedException($process);
+            return 0;
         }
 
-        // 3. Rata-rata dari nilai rasio maksimum adalah skor DBI Murni
-        $rawDbi = $dbiSum / $k;
+        // 5. Tangkap angka yang di-print oleh Python
+        $output = trim($process->getOutput());
 
-        // Konstanta untuk menekan nilai 1.2277 menjadi ~1.129
-        $calibrationFactor = 0.09791611;
-
-        $finalDbi = $rawDbi - $calibrationFactor;
-
-        return $finalDbi;
+        return floatval($output);
     }
 }

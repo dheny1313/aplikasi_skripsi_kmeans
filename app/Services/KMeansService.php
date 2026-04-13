@@ -2,146 +2,85 @@
 
 namespace App\Services;
 
+use Symfony\Component\Process\Process;
+use Symfony\Component\Process\Exception\ProcessFailedException;
+use Exception;
+
 class KMeansService
 {
-    protected $k;
     protected $dataset;
-    protected $centroids = [];
-    protected $clusters = [];
-    protected $maxIterations = 100;
-    protected $history = [];
+    protected $k;
 
-    public function __construct($k, array $dataset)
+    public function __construct($k, $dataset)
     {
         $this->k = $k;
         $this->dataset = $dataset;
     }
 
-    public function cluster()
+    public function runPythonEngine()
     {
-        $this->initializeCentroids();
-        $isConverged = false;
-        $iteration = 0;
-
-        while (!$isConverged && $iteration < $this->maxIterations) {
-            $iteration++;
-            $oldCentroids = $this->centroids;
-
-            $this->assignToClusters();
-
-            $this->history[] = [
-                'iteration' => $iteration,
-                'centroids' => $this->centroids,
-                'clusters' => $this->clusters,
-            ];
-
-            $this->updateCentroids();
-
-            if ($this->isConverged($oldCentroids, $this->centroids)) {
-                $isConverged = true;
-            }
-        }
-
-        return [
-            'k' => $this->k,
-            'total_iterations' => $iteration,
-            'final_clusters' => $this->clusters,
-            'final_centroids' => $oldCentroids,
-            'history' => $this->history
-        ];
-    }
-
-    protected function initializeCentroids()
-    {
-        // 1. Ambil semua ID siswa
-        $studentIds = array_keys($this->dataset);
-
-        // 2. KUNCI PERTAMA: Urutkan ID agar daftarnya selalu konsisten setiap kali dieksekusi
-        sort($studentIds);
-
-        // 3. KUNCI KEDUA: Tentukan jarak lompatan untuk memilih Centroid awal
-        // Jika siswa ada 42 dan K=3, maka lompatannya adalah 42/3 = 14
-        $step = max(1, floor(count($studentIds) / $this->k));
-
-        for ($i = 0; $i < $this->k; $i++) {
-            // Ambil siswa pada indeks ke-0, ke-14, dan ke-28 sebagai titik mula
-            $index = $i * $step;
-
-            // Mencegah error jika indeks melebihi jumlah data
-            if ($index >= count($studentIds)) {
-                $index = count($studentIds) - 1;
-            }
-
-            $id = $studentIds[$index];
-            $this->centroids[$i] = $this->dataset[$id];
-        }
-    }
-    
-    protected function assignToClusters()
-    {
-        $this->clusters = array_fill(0, $this->k, []);
+        // 1. Siapkan data nilai murni untuk Python (buang nama kriteria, ambil angkanya saja)
+        $pythonData = [];
+        $criteriaKeys = [];
 
         foreach ($this->dataset as $studentId => $scores) {
-            $minDistance = null;
-            $closestClusterIndex = null;
-
-            foreach ($this->centroids as $clusterIndex => $centroid) {
-                $distance = $this->calculateEuclideanDistance($scores, $centroid);
-                if ($minDistance === null || $distance < $minDistance) {
-                    $minDistance = $distance;
-                    $closestClusterIndex = $clusterIndex;
-                }
+            if (empty($criteriaKeys)) {
+                $criteriaKeys = array_keys($scores); // Simpan urutan kriteria (misal: V1, V2)
             }
-            $this->clusters[$closestClusterIndex][] = $studentId;
+            $pythonData[$studentId] = array_values($scores);
         }
-    }
 
-    public function calculateEuclideanDistance($dataPoint, $centroid)
-    {
-        $sum = 0;
-        foreach ($centroid as $criterion => $value) {
-            if (isset($dataPoint[$criterion])) {
-                $sum += pow($dataPoint[$criterion] - $value, 2);
-            }
+        // 2. Bungkus nilai K dan Data menjadi teks JSON
+        $payload = json_encode([
+            'k' => $this->k,
+            'data' => $pythonData
+        ]);
+
+        // 3. Tentukan letak file Python
+        $pythonScriptPath = storage_path('app/scripts/kmeans_engine.py');
+
+        // 4. Jalankan Python lewat Terminal (Ganti 'python' menjadi 'python3' jika Anda pakai Mac/Linux)
+        // 4. Jalankan Python dengan membawa Environment Variable Windows (SystemRoot)
+        $process = new Process(
+            ['python', $pythonScriptPath, $payload],
+            null, // working directory default
+            [
+                'SystemRoot' => getenv('SystemRoot') ?: 'C:\WINDOWS',
+                'PATH' => getenv('PATH')
+            ]
+        );
+        $process->run();
+
+
+        // 5. Cek jika terjadi kegagalan sistem
+        if (!$process->isSuccessful()) {
+            throw new Exception("Gagal menjalankan Python: " . $process->getErrorOutput());
         }
-        return sqrt($sum);
-    }
 
-    protected function updateCentroids()
-    {
-        foreach ($this->clusters as $clusterIndex => $studentIds) {
-            if (empty($studentIds)) continue;
+        // 6. Tangkap dan Terjemahkan jawaban JSON dari Python
+        $response = json_decode(trim($process->getOutput()), true);
 
-            $newCentroid = [];
-            $numStudents = count($studentIds);
-            $sumScores = [];
-
-            foreach ($studentIds as $id) {
-                $scores = $this->dataset[$id];
-                foreach ($scores as $criterion => $value) {
-                    if (!isset($sumScores[$criterion])) $sumScores[$criterion] = 0;
-                    $sumScores[$criterion] += $value;
-                }
-            }
-
-            foreach ($sumScores as $criterion => $sum) {
-                $newCentroid[$criterion] = $sum / $numStudents;
-            }
-            $this->centroids[$clusterIndex] = $newCentroid;
+        if (isset($response['status']) && $response['status'] === 'error') {
+            throw new Exception("Error dari Python: " . $response['message']);
         }
-    }
 
-    protected function isConverged($oldCentroids, $newCentroids)
-    {
-        $epsilon = 0.0001;
-        foreach ($oldCentroids as $clusterIndex => $oldCentroid) {
-            $newCentroid = $newCentroids[$clusterIndex];
-            foreach ($oldCentroid as $criterion => $oldValue) {
-                if (abs($oldValue - $newCentroid[$criterion]) > $epsilon) {
-                    return false;
-                }
+        // 7. Kembalikan Centroid ke format asal agar Laravel tidak bingung
+        $formattedCentroids = [];
+        foreach ($response['centroids'] as $clusterIndex => $centroidValues) {
+            $centroidData = [];
+            foreach ($centroidValues as $index => $value) {
+                $criterionCode = $criteriaKeys[$index];
+                $centroidData[$criterionCode] = $value;
             }
+            $formattedCentroids[$clusterIndex] = $centroidData;
         }
-        return true;
+
+        // 8. Kirim hasil lengkapnya ke Controller
+        return [
+            'clusters' => $response['clusters'],
+            'centroids' => $formattedCentroids,
+            'dbi' => $response['dbi'],
+            'iterations' => $response['iterations'],
+        ];
     }
 }
