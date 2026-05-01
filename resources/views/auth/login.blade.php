@@ -17,8 +17,8 @@
             <div class="card auth-card shadow-lg">
                 <div class="row g-0">
                     <div class="col-md-5 auth-left d-none d-md-flex text-center">
-                        <h2 class="fw-bolder mb-3">Selamat Datang Kembali!</h2>
-                        <p class="opacity-75">Sistem Cerdas Alokasi Pengajar Codero menggunakan Algoritma K-Means Clustering.</p>
+                        <h2 class="fw-bolder mb-3">Selamat Datang</h2>
+                        <p class="opacity-75">Sistem Cerdas Pengelompokkan siswa menggunakan Algoritma K-Means Clustering.</p>
                     </div>
 
                     <div class="col-md-7 p-5">

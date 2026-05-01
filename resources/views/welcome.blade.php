@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Codero | Sistem Klastering Pengajar</title>
+    <title>Codero | Sistem K-Means</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
@@ -91,7 +91,7 @@
             <div class="container mt-4">
                 <h1 class="display-4 fw-bolder mb-4">Optimalkan Potensi Siswa dengan <br> <span class="text-warning">K-Means Clustering</span></h1>
                 <p class="lead mb-5 opacity-75 mx-auto" style="max-width: 650px; font-weight: 400;">
-                    Sistem cerdas untuk menganalisis, memetakan, dan mengelompokkan siswa berdasarkan multi-kriteria guna menentukan alokasi pengajar Robotics & Coding yang paling tepat di Codero.
+                    Sistem cerdas untuk menganalisis dan mengelompokkan siswa berdasarkan multi-kriteria guna memberikan data sebagai bahan pertimbangan alokasi pengajar Coding yang paling tepat di Codero.
                 </p>
                 @guest
                     <a href="{{ route('login') }}" class="btn btn-warning btn-lg fw-bold rounded-pill px-5 py-3 shadow-lg" style="transition: transform 0.2s;">Mulai Analisis Sekarang ➔</a>
@@ -113,7 +113,7 @@
                     <div class="card feature-card shadow-sm h-100 p-4">
                         <div class="icon-box">🤖</div>
                         <h5 class="fw-bold text-dark">Algoritma K-Means</h5>
-                        <p class="text-muted mb-0">Pemrosesan klastering yang cepat dan deterministik dengan validasi akurasi menggunakan metode Elbow.</p>
+                        <p class="text-muted mb-0">Pemrosesan klastering yang cepat dan deterministik dengan validasi akurasi menggunakan metode DBI.</p>
                     </div>
                 </article>
 
@@ -130,7 +130,8 @@
 
     <footer class="site-footer text-center">
         <div class="container">
-            <h5 class="text-white fw-bold mb-3">🚀 Codero App</h5>
+            <h5 class="text-white fw-bold mb-3"> <img src="{{ asset('images/LOGO_codero.png') }}" alt="Logo Codero" height="40" class="d-inline-block align-text-top me-2">
+                <img src="{{ asset('images/stmik-baru.png') }}" alt="Logo stmik" height="40" class="d-inline-block align-text-top me-2"> Codero App</h5>
             <p class="small mb-4 opacity-75" style="max-width: 500px; margin: 0 auto;">
                 Platform analisis cerdas yang didedikasikan untuk meningkatkan kualitas pendidikan melalui pengelompokan siswa berbasis data.
             </p>

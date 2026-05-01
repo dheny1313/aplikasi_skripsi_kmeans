@@ -38,41 +38,67 @@ class KMeansController extends Controller
         return view('admin.kmeans.index', compact('logs'));
     }
 
-    // 2. Fungsi Bantuan: Menarik data, agregasi Multi-Rater, dan Filter Ketat
-    private function getFormattedDataset()
+    public function syncNormalization()
     {
-        // Kunci Pertahanan: Hitung ada berapa kriteria yang wajib diisi
-        $totalCriteria = Criterion::count();
-
-        $students = Student::with(['scores.criterion'])
+        $totalCriteria = \App\Models\Criterion::count();
+        $students = \App\Models\Student::with('scores.criterion')
             ->where('is_active', true)
             ->whereHas('scores')
             ->get();
 
-        $dataset = [];
+        $aggregatedData = [];
+
+        // 1. Agregasi Multi-Rater (Cari Nilai Rata-rata)
         foreach ($students as $student) {
             $tempScores = [];
-
-            // Kumpulkan nilai dari banyak guru
             foreach ($student->scores as $score) {
                 if ($score->criterion) {
                     $code = $score->criterion->code;
-                    if (!isset($tempScores[$code])) {
-                        $tempScores[$code] = [];
-                    }
                     $tempScores[$code][] = $score->score;
                 }
             }
 
-            // FILTER KETAT: Hanya proses siswa yang SEMUA kriterianya sudah memiliki nilai minimal 1
+            // Pastikan semua kriteria terisi
             if (count($tempScores) === $totalCriteria && $totalCriteria > 0) {
-                $dataset[$student->id] = [];
-
-                // Hitung rata-rata (Agregasi Multi-Rater)
+                $aggregatedData[$student->id] = [];
                 foreach ($tempScores as $code => $scoresArray) {
-                    $dataset[$student->id][$code] = array_sum($scoresArray) / count($scoresArray);
+                    // Rumus Rata-rata Murni (Tanpa Min-Max)
+                    $avg = array_sum($scoresArray) / count($scoresArray);
+
+                    // Format agar persis seperti Excel (2 angka di belakang koma)
+                    $aggregatedData[$student->id][$code] = round($avg, 2);
                 }
             }
+        }
+
+        // 2. Simpan Langsung ke Tabel
+        DB::beginTransaction();
+        try {
+            // Kosongkan tabel lama
+            \App\Models\NormalizedScore::truncate();
+
+            foreach ($aggregatedData as $studentId => $scores) {
+                \App\Models\NormalizedScore::create([
+                    'student_id' => $studentId,
+                    'normalized_data' => $scores // Ini sekarang berisi nilai rata-rata murni
+                ]);
+            }
+            DB::commit();
+            return redirect()->back()->with('success', 'Data siswa berhasil diagregasi (Rata-rata) dan disimpan ke database!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Gagal menyimpan data: ' . $e->getMessage());
+        }
+    }
+
+    private function getFormattedDataset()
+    {
+        // Langsung tarik data matang dari tabel, diurutkan ID agar sekuensial
+        $normalizedRecords = \App\Models\NormalizedScore::orderBy('student_id', 'asc')->get();
+
+        $dataset = [];
+        foreach ($normalizedRecords as $record) {
+            $dataset[$record->student_id] = $record->normalized_data;
         }
 
         return $dataset;

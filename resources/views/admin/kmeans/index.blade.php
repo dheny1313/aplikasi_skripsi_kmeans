@@ -48,6 +48,12 @@
                 <h6 class="fw-bold text-primary mb-3">⚙️ Jalankan Klastering</h6>
                 <p class="text-muted small mb-4">Setelah melihat grafik Elbow, masukkan nilai K yang Anda inginkan di bawah ini untuk memulai pengelompokan final.</p>
 
+                <form action="{{ route('admin.kmeans.sync') }}" method="POST" class="d-inline">
+                    @csrf
+                    <button type="submit" class="btn btn-warning fw-bold rounded-pill shadow-sm px-4">
+                        🔄 1. Update Data Normalisasi
+                    </button>
+                </form>
                 <form action="{{ route('admin.kmeans.calculate') }}" method="POST">
                     @csrf
                     <div class="mb-3">
@@ -76,13 +82,16 @@
                     </div>
                 </div>
 
-                <div class="col-md-4">
+               <div class="col-md-4">
                     <select name="k_value" class="form-select border-light shadow-sm text-secondary">
                         <option value="">-- Semua Jumlah Klaster --</option>
-                        <option value="2" {{ request('k_value') == '2' ? 'selected' : '' }}>2 Klaster</option>
-                        <option value="3" {{ request('k_value') == '3' ? 'selected' : '' }}>3 Klaster</option>
-                        <option value="4" {{ request('k_value') == '4' ? 'selected' : '' }}>4 Klaster</option>
-                        <option value="5" {{ request('k_value') == '5' ? 'selected' : '' }}>5 Klaster</option>
+
+                        @for ($i = 2; $i <= 10; $i++)
+                            <option value="{{ $i }}" {{ request('k_value') == $i ? 'selected' : '' }}>
+                                {{ $i }} Klaster
+                            </option>
+                        @endfor
+
                     </select>
                 </div>
 

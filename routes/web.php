@@ -19,6 +19,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
 
     // URL: domain.com/admin/dashboard
 
+    Route::post('/kmeans/sync-normalization', [\App\Http\Controllers\Admin\KMeansController::class, 'syncNormalization'])->name('admin.kmeans.sync');
+
 
     Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('admin.dashboard');
     // Rute Master Pengguna (User Management)
@@ -64,12 +66,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
 // -------------------------------------------------------------------
 Route::middleware(['auth', 'role:teacher'])->prefix('teacher')->group(function () {
 
-Route::get('/dashboard', [\App\Http\Controllers\Teacher\DashboardController::class, 'index'])->name('teacher.dashboard');
+    Route::get('/dashboard', [\App\Http\Controllers\Teacher\DashboardController::class, 'index'])->name('teacher.dashboard');
     // URL: domain.com/teacher/dashboard
     //Route::get('/dashboard', function () {
-      //  return view(
-        //    'teacher.dashboard'
-        //);
+    //  return view(
+    //    'teacher.dashboard'
+    //);
     //})->name('teacher.dashboard');
 
     // Nanti route input nilai siswa kita taruh di sini
