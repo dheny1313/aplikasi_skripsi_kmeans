@@ -119,7 +119,9 @@
                     <li><a href="{{ route('admin.user.index') }}" class="{{ request()->routeIs('admin.user.*') ? 'active' : '' }}">👥 Manajemen Pengguna</a></li>
                     <li><a href="{{ route('admin.student.index') }}" class="{{ request()->routeIs('admin.student.*') ? 'active' : '' }}">👨‍🎓 Master Siswa</a></li>
                     <li><a href="{{ route('admin.criteria.index') }}" class="{{ request()->routeIs('admin.criteria.*') ? 'active' : '' }}">📊 Master Kriteria</a></li>
+
                     <li><a href="{{ route('admin.score.index') }}" class="{{ request()->routeIs('admin.score.*') ? 'active' : '' }}">📝 Manajemen Nilai</a></li>
+                    <li><a href="{{ route('admin.data.normalization') }}" class="{{ request()->routeIs('admin.data.*') ? 'active' : '' }}">🎫 Data Normalisasi</a></li>
                     <li><a href="{{ route('admin.kmeans.index') }}" class="{{ request()->routeIs('admin.kmeans.*') ? 'active' : '' }}">⚙️ Eksekusi K-Means</a></li>
                     <li><a href="{{ route('admin.report.index') }}" class="{{ request()->routeIs('admin.report.*') ? 'active' : '' }}">📄 Cetak Laporan</a></li>
                 @elseif(Auth::check() && Auth::user()->role === 'teacher')

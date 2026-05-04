@@ -30,7 +30,7 @@
 
                             <div class="mb-3">
                                 <label for="email" class="form-label fw-semibold text-secondary small">Alamat Email</label>
-                                <input id="email" type="email" class="form-control custom-input @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required autocomplete="email" autofocus placeholder="contoh@codero.id">
+                                <input id="email" type="email" class="form-control custom-input @error('email') is-invalid @enderror" name="email" value="{{ old('email') }}" required autocomplete="email" autofocus placeholder="contoh@codero.id" oninvalid="this.setCustomValidity('Harap sertakan simbol \'@\' pada alamat email yang valid.')" oninput="this.setCustomValidity('')">
                                 @error('email')
                                     <span class="invalid-feedback"><strong>{{ $message }}</strong></span>
                                 @enderror

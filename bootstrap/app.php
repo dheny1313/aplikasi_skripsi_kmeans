@@ -17,5 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        // Menangani error 419 Page Expired (CSRF Token Mismatch) agar tidak menampilkan layar putih
+        $exceptions->renderable(function (\Illuminate\Session\TokenMismatchException $e, $request) {
+            return redirect()->back()->withInput($request->except('password', '_token'))->withErrors([
+                'email' => 'Sesi halaman Anda telah kedaluwarsa karena terlalu lama diam. Silakan coba login kembali.'
+            ]);
+        });
     })->create();

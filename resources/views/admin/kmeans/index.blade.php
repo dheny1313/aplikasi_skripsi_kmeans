@@ -47,13 +47,6 @@
             <div class="card-body p-4">
                 <h6 class="fw-bold text-primary mb-3">⚙️ Jalankan Klastering</h6>
                 <p class="text-muted small mb-4">Setelah melihat grafik Elbow, masukkan nilai K yang Anda inginkan di bawah ini untuk memulai pengelompokan final.</p>
-
-                <form action="{{ route('admin.kmeans.sync') }}" method="POST" class="d-inline">
-                    @csrf
-                    <button type="submit" class="btn btn-warning fw-bold rounded-pill shadow-sm px-4">
-                        🔄 1. Update Data Normalisasi
-                    </button>
-                </form>
                 <form action="{{ route('admin.kmeans.calculate') }}" method="POST">
                     @csrf
                     <div class="mb-3">
@@ -132,11 +125,11 @@
                         <td class="fw-bold text-primary">{{ $log->k_value }} Klaster</td>
                         <td>
                             @if($log->dbi_score < 0.5)
-                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">{{ number_format($log->dbi_score, 4) }} (Sangat Baik)</span>
+                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">{{ number_format($log->dbi_score, 4) }} </span>
                             @elseif($log->dbi_score < 1.0)
-                                <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">{{ number_format($log->dbi_score, 4) }} (Cukup)</span>
+                                <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">{{ number_format($log->dbi_score, 4) }} </span>
                             @else
-                                <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3">{{ number_format($log->dbi_score, 4) }} (Buruk)</span>
+                                <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3">{{ number_format($log->dbi_score, 4) }} </span>
                             @endif
                         </td>
                         <td class="text-end pe-4">

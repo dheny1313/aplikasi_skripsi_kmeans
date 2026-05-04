@@ -38,17 +38,38 @@ class KMeansController extends Controller
         return view('admin.kmeans.index', compact('logs'));
     }
 
-    public function syncNormalization()
+    private function runNormalizationLogic()
     {
         $totalCriteria = \App\Models\Criterion::count();
-        $students = \App\Models\Student::with('scores.criterion')
+        if ($totalCriteria === 0) {
+            return ['status' => false, 'message' => 'Data kriteria belum diatur. Silakan tambahkan kriteria terlebih dahulu.'];
+        }
+
+        $activeTeacherCount = \App\Models\User::where('role', 'teacher')->where('is_active', true)->count();
+        if ($activeTeacherCount === 0) {
+            return ['status' => false, 'message' => 'Tidak ada guru aktif yang dapat menilai.'];
+        }
+
+        $students = \App\Models\Student::with(['scores' => function($query) {
+                $query->whereHas('teacher', function($q) {
+                    $q->where('is_active', true);
+                })->with('criterion');
+            }])
             ->where('is_active', true)
-            ->whereHas('scores')
+            ->whereHas('scores', function($query) {
+                $query->whereHas('teacher', function($q) {
+                    $q->where('is_active', true);
+                });
+            })
             ->get();
 
-        $aggregatedData = [];
+        if ($students->isEmpty()) {
+            return ['status' => false, 'message' => 'Tidak ada data siswa aktif yang memiliki nilai (dari guru aktif) untuk diproses.'];
+        }
 
-        // 1. Agregasi Multi-Rater (Cari Nilai Rata-rata)
+        $aggregatedData = [];
+        $incompleteStudents = [];
+
         foreach ($students as $student) {
             $tempScores = [];
             foreach ($student->scores as $score) {
@@ -58,36 +79,64 @@ class KMeansController extends Controller
                 }
             }
 
-            // Pastikan semua kriteria terisi
-            if (count($tempScores) === $totalCriteria && $totalCriteria > 0) {
-                $aggregatedData[$student->id] = [];
+            if (count($tempScores) === $totalCriteria) {
+                $isComplete = true;
                 foreach ($tempScores as $code => $scoresArray) {
-                    // Rumus Rata-rata Murni (Tanpa Min-Max)
-                    $avg = array_sum($scoresArray) / count($scoresArray);
-
-                    // Format agar persis seperti Excel (2 angka di belakang koma)
-                    $aggregatedData[$student->id][$code] = round($avg, 2);
+                    if (count($scoresArray) < $activeTeacherCount) {
+                        $isComplete = false;
+                        break;
+                    }
                 }
+
+                if ($isComplete) {
+                    $aggregatedData[$student->id] = [];
+                    foreach ($tempScores as $code => $scoresArray) {
+                        $avg = array_sum($scoresArray) / count($scoresArray);
+                        $aggregatedData[$student->id][$code] = round($avg, 2);
+                    }
+                } else {
+                    $incompleteStudents[] = $student->name . " (Hanya dinilai sebagian guru)";
+                }
+            } else {
+                $incompleteStudents[] = $student->name . " (Kriteria tidak lengkap)";
             }
         }
 
-        // 2. Simpan Langsung ke Tabel
+        if (count($incompleteStudents) > 0) {
+            $sampleNames = implode(', ', array_slice($incompleteStudents, 0, 3));
+            $moreText = count($incompleteStudents) > 3 ? ' dan ' . (count($incompleteStudents) - 3) . ' lainnya' : '';
+            return ['status' => false, 'message' => "Terdapat " . count($incompleteStudents) . " siswa yang belum lengkap dinilai oleh seluruh $activeTeacherCount guru aktif ($sampleNames$moreText)."];
+        }
+
+        if (count($aggregatedData) < 3) {
+            return ['status' => false, 'message' => 'Data valid terlalu sedikit. Minimal butuh 3 siswa dengan nilai lengkap dari semua guru aktif untuk melakukan clustering.'];
+        }
+
         DB::beginTransaction();
         try {
-            // Kosongkan tabel lama
-            \App\Models\NormalizedScore::truncate();
-
+            \App\Models\NormalizedScore::query()->delete();
             foreach ($aggregatedData as $studentId => $scores) {
                 \App\Models\NormalizedScore::create([
                     'student_id' => $studentId,
-                    'normalized_data' => $scores // Ini sekarang berisi nilai rata-rata murni
+                    'normalized_data' => $scores
                 ]);
             }
             DB::commit();
-            return redirect()->back()->with('success', 'Data siswa berhasil diagregasi (Rata-rata) dan disimpan ke database!');
+            return ['status' => true, 'message' => 'Data siswa berhasil diagregasi dan disinkronisasi ke database.'];
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'Gagal menyimpan data: ' . $e->getMessage());
+            return ['status' => false, 'message' => 'Gagal menyimpan data agregasi: ' . $e->getMessage()];
+        }
+    }
+
+    public function syncNormalization()
+    {
+        $result = $this->runNormalizationLogic();
+        
+        if ($result['status']) {
+            return redirect()->back()->with('success', $result['message']);
+        } else {
+            return redirect()->back()->with('error', 'Validasi Gagal: ' . $result['message']);
         }
     }
 
@@ -107,6 +156,13 @@ class KMeansController extends Controller
     // 3. API Eksekusi Elbow Method (Untuk Grafik AJAX)
     public function runElbow()
     {
+        // 1. Validasi dan Sinkronisasi Data Otomatis Sebelum Elbow
+        $syncResult = $this->runNormalizationLogic();
+        
+        if (!$syncResult['status']) {
+            return response()->json(['error' => 'Data tidak siap untuk grafik Elbow: ' . $syncResult['message']], 400);
+        }
+
         $dataset = $this->getFormattedDataset();
 
         if (count($dataset) < 3) {
@@ -125,6 +181,17 @@ class KMeansController extends Controller
         $request->validate([
             'k_value' => 'required|integer|min:2|max:10'
         ]);
+
+        // ==========================================
+        // VALIDASI & SINKRONISASI OTOMATIS DATA TERBARU
+        // ==========================================
+        $syncResult = $this->runNormalizationLogic();
+        
+        if (!$syncResult['status']) {
+            return redirect()->route('admin.data.normalization')
+                ->with('error', 'Gagal Klastering. Ada perubahan data master dan sistem tidak dapat menyinkronkan data baru karena: ' . $syncResult['message'] . ' Harap perbaiki data penilaian terlebih dahulu.');
+        }
+        // ==========================================
 
         $k = $request->k_value;
 
@@ -186,6 +253,18 @@ class KMeansController extends Controller
             DB::rollBack();
             return redirect()->back()->withErrors(['Terjadi kesalahan sistem: ' . $e->getMessage()]);
         }
+    }
+
+    //menampilkan data normalisasi
+    // Menampilkan Halaman Menu Khusus Normalisasi
+    public function normalizationIndex()
+    {
+        // Tarik data normalisasi beserta nama siswanya
+        $normalizedData = \App\Models\NormalizedScore::with('student')
+            ->orderBy('student_id', 'asc')
+            ->get();
+
+        return view('admin.kmeans.normalization', compact('normalizedData'));
     }
 
     // 5. Menampilkan Halaman Hasil Detail

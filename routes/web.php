@@ -18,8 +18,12 @@ Auth::routes();
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
 
     // URL: domain.com/admin/dashboard
+    // Rute untuk menampilkan halaman tabel normalisasi
+    Route::get('/kmeans/normalization', [\App\Http\Controllers\Admin\KMeansController::class, 'normalizationIndex'])->name('admin.data.normalization');
 
-    Route::post('/kmeans/sync-normalization', [\App\Http\Controllers\Admin\KMeansController::class, 'syncNormalization'])->name('admin.kmeans.sync');
+    // (Pastikan rute sync yang sebelumnya sudah ada tetap di sini)
+    Route::post('/kmeans/sync-normalization', [\App\Http\Controllers\Admin\KMeansController::class, 'syncNormalization'])->name('admin.data.sync');
+
 
 
     Route::get('/dashboard', [\App\Http\Controllers\Admin\DashboardController::class, 'index'])->name('admin.dashboard');

@@ -59,7 +59,6 @@
                     <tr>
                         <th class="py-3 text-start ps-4">Tanggal Ditetapkan</th>
                         <th class="py-3">Jumlah Klaster</th>
-                        <th class="py-3">Kualitas Klaster (DBI)</th>
                         <th class="py-3 text-end pe-4">Aksi</th>
                     </tr>
                 </thead>
@@ -68,15 +67,6 @@
                     <tr>
                         <td class="text-start ps-4">{{ $log->created_at->format('d M Y, H:i') }}</td>
                         <td class="fw-bold text-primary">{{ $log->k_value }} Klaster</td>
-                        <td>
-                            @if($log->dbi_score < 0.5)
-                                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">Sangat Baik</span>
-                            @elseif($log->dbi_score < 1.0)
-                                <span class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3">Cukup Baik</span>
-                            @else
-                                <span class="badge bg-danger bg-opacity-10 text-danger rounded-pill px-3">Kurang Optimal</span>
-                            @endif
-                        </td>
                         <td class="text-end pe-4">
                             <a href="{{ route('teacher.kmeans.result', $log->id) }}" class="btn btn-sm btn-primary shadow-sm" style="background-color: #4f46e5; border: none;">Lihat Anggota 👥</a>
                         </td>

@@ -22,12 +22,12 @@ class UserSeeder extends Seeder
             'role' => 'admin',
         ]);
 
-        // 2. Membuat Akun Teacher
-        User::create([
-            'name' => 'Dani Cahyono',
-            'email' => 'dani@codero.com',
-            'password' => Hash::make('password123'), // Password dummy: password123
-            'role' => 'teacher',
-        ]);
+        // // 2. Membuat Akun Teacher
+        // User::create([
+        //     'name' => 'Dani Cahyono',
+        //     'email' => 'dani@codero.com',
+        //     'password' => Hash::make('password123'), // Password dummy: password123
+        //     'role' => 'teacher',
+        // ]);
     }
 }
