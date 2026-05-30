@@ -1,0 +1,8 @@
+---
+deployment:
+  tasks:
+    # GANTI 'username' dengan username cPanel Anda
+    # GANTI 'public_html' dengan folder tujuan website Anda jika menggunakan addon domain
+    - export DEPLOYPATH=/home/username/public_html/
+    - /bin/cp -R * $DEPLOYPATH
+    - /bin/cp -R .env $DEPLOYPATH
