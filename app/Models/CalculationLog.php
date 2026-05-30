@@ -15,7 +15,12 @@ class CalculationLog extends Model
         'k_value',
         'dbi_score',
         'total_iterations',
-        'description'
+        'description',
+        'iteration_history'
+    ];
+
+    protected $casts = [
+        'iteration_history' => 'array',
     ];
 
     public function user()

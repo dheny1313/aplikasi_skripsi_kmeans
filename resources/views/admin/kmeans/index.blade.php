@@ -66,8 +66,25 @@
                     @csrf
                     <div class="mb-3">
                         <label class="form-label fw-bold text-dark">Jumlah Klaster (K)</label>
-                        <input type="number" name="k_value" class="form-control form-control-lg border-primary shadow-sm" placeholder="Contoh: 3" min="2" max="10" required>
+                        <input type="number" id="k_value" name="k_value" class="form-control form-control-lg border-primary shadow-sm" placeholder="Contoh: 3" min="2" max="10" required>
                     </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-dark">Metode Inisialisasi Centroid</label>
+                        <select name="init_method" id="init_method" class="form-select border-primary shadow-sm">
+                            <option value="sequential">Sekuensial (Urutan Pertama)</option>
+                            <option value="random">Acak (Random)</option>
+                            <option value="manual">Manual (Pilih Siswa)</option>
+                        </select>
+                    </div>
+
+                    <div id="manual_centroids_container" class="mb-3 d-none p-3 bg-white rounded border border-primary shadow-sm">
+                        <label class="form-label fw-bold text-primary mb-2"><i class="fas fa-hand-pointer me-1"></i> Pilih Siswa untuk Centroid Awal:</label>
+                        <div id="manual_centroids_list">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+
                     <button type="submit" class="btn btn-primary w-100 py-2 fw-bold shadow" style="background-color: #4f46e5; border: none;">
                         Mulai Eksekusi K-Means 🚀
                     </button>
@@ -209,6 +226,49 @@
 
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const kInput = document.getElementById('k_value');
+        const initSelect = document.getElementById('init_method');
+        const manualContainer = document.getElementById('manual_centroids_container');
+        const manualList = document.getElementById('manual_centroids_list');
+
+        const students = @json($readyStudents->map(function($s) { return ['id' => $s->student->id, 'name' => $s->student->name, 'nis' => $s->student->student_id]; })->values());
+
+        function updateManualUI() {
+            if (initSelect.value === 'manual') {
+                manualContainer.classList.remove('d-none');
+                let k = parseInt(kInput.value) || 0;
+                
+                if(k > 0) {
+                    if(k > 10) k = 10;
+                    
+                    let html = '';
+                    for(let i = 1; i <= k; i++) {
+                        html += `<div class="mb-2">
+                            <label class="form-label small text-muted mb-1 fw-bold">Centroid ${i}</label>
+                            <select name="manual_centroids[]" class="form-select form-select-sm border-secondary shadow-sm" required>
+                                <option value="">-- Pilih Siswa --</option>`;
+                        students.forEach(student => {
+                            html += `<option value="${student.id}">${student.nis} - ${student.name}</option>`;
+                        });
+                        html += `</select></div>`;
+                    }
+                    manualList.innerHTML = html;
+                } else {
+                    manualList.innerHTML = '<div class="alert alert-warning py-2 mb-0 small">Silakan isi Jumlah Klaster (K) terlebih dahulu.</div>';
+                }
+            } else {
+                manualContainer.classList.add('d-none');
+                manualList.innerHTML = '';
+            }
+        }
+
+        initSelect.addEventListener('change', updateManualUI);
+        kInput.addEventListener('input', updateManualUI);
+    });
+</script>
 
 {{-- metode elbow --}}
 {{-- <script>

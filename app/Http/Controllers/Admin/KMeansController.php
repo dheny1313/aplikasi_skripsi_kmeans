@@ -42,7 +42,10 @@ class KMeansController extends Controller
             'student_count' => \App\Models\NormalizedScore::count(), // Data siswa yang sudah lengkap dan siap
         ];
 
-        return view('admin.kmeans.index', compact('logs', 'stats'));
+        // Ambil data siswa yang sudah dinormalisasi untuk dropdown manual
+        $readyStudents = \App\Models\NormalizedScore::with('student')->get();
+
+        return view('admin.kmeans.index', compact('logs', 'stats', 'readyStudents'));
     }
 
     private function runNormalizationLogic()
@@ -186,7 +189,10 @@ class KMeansController extends Controller
     public function calculate(Request $request)
     {
         $request->validate([
-            'k_value' => 'required|integer|min:2|max:10'
+            'k_value' => 'required|integer|min:2|max:10',
+            'init_method' => 'nullable|string|in:sequential,random,manual',
+            'manual_centroids' => 'nullable|array',
+            'manual_centroids.*' => 'integer'
         ]);
 
         // ==========================================
@@ -211,15 +217,54 @@ class KMeansController extends Controller
 
         DB::beginTransaction();
         try {
+            $initMethod = $request->init_method ?? 'sequential';
+            $manualCentroids = $request->manual_centroids ?? [];
+
             // 2. Panggil Mesin PHP!
-            $kmeansService = new \App\Services\KMeansService($k, $dataset);
+            $kmeansService = new \App\Services\KMeansService($k, $dataset, $initMethod, $manualCentroids);
             $pythonResult = $kmeansService->run();
 
-            // 3. Ekstrak hasil dari Python
+            // 3. Ekstrak hasil dari PHP
             $clusters = $pythonResult['clusters'];
             $centroids = $pythonResult['centroids'];
-            $dbiScore = $pythonResult['dbi']; // DBI langsung dapet dari Python!
+            $dbiScore = $pythonResult['dbi']; // DBI langsung dapet dari PHP!
             $iterations = $pythonResult['iterations'];
+            $history = $pythonResult['history'] ?? [];
+
+            $methodLabel = ucfirst($initMethod);
+            if ($initMethod === 'manual') {
+                $methodLabel .= ' (Siswa ID: ' . implode(', ', $manualCentroids) . ')';
+            }
+
+            $studentsData = Student::whereIn('id', array_keys($dataset))->get()->keyBy('id');
+
+            // Inject nama siswa ke dalam history
+            if (!empty($history) && isset($history['initial_centroids'])) {
+                foreach ($history['initial_centroids'] as &$ic) {
+                    if ($ic['student_id'] && isset($studentsData[$ic['student_id']])) {
+                        $ic['name'] = $studentsData[$ic['student_id']]->name;
+                        $ic['nis'] = $studentsData[$ic['student_id']]->student_id;
+                    } else {
+                        $ic['name'] = 'Titik Acak / Bukan Siswa';
+                        $ic['nis'] = '-';
+                    }
+                }
+                foreach ($history['iterations'] as &$step) {
+                    foreach ($step['clusters'] as &$cluster) {
+                        $mappedMembers = [];
+                        foreach ($cluster['members'] as $mId) {
+                            if (isset($studentsData[$mId])) {
+                                $mappedMembers[] = [
+                                    'id' => $mId,
+                                    'name' => $studentsData[$mId]->name,
+                                    'nis' => $studentsData[$mId]->student_id
+                                ];
+                            }
+                        }
+                        $cluster['members'] = $mappedMembers;
+                    }
+                }
+            }
 
             // 4. Simpan Log Induk
             $log = CalculationLog::create([
@@ -227,14 +272,14 @@ class KMeansController extends Controller
                 'k_value' => $k,
                 'dbi_score' => $dbiScore,
                 'total_iterations' => $iterations,
-                'description' => sprintf('Perhitungan K-Means dengan K=%d (Data: %d Siswa, %d Kriteria, %d Guru Aktif) (PHP Engine)', 
+                'description' => sprintf('Perhitungan K-Means dengan K=%d (Data: %d Siswa, %d Kriteria, %d Guru Aktif) (Metode: %s)', 
                                     $k, 
                                     count($dataset), 
                                     \App\Models\Criterion::count(), 
-                                    \App\Models\User::where('role', 'teacher')->where('is_active', true)->count()),
+                                    \App\Models\User::where('role', 'teacher')->where('is_active', true)->count(),
+                                    $methodLabel),
+                'iteration_history' => $history
             ]);
-
-            $studentsData = Student::whereIn('id', array_keys($dataset))->get()->keyBy('id');
 
             // 5. Simpan Hasil Detail Siswa
             // KUNCI PERBAIKAN: Gunakan $clusters, BUKAN $clusterResult['final_clusters']
@@ -282,7 +327,7 @@ class KMeansController extends Controller
     public function showResult($log_id)
     {
         $log = CalculationLog::with('results')->findOrFail($log_id);
-        $history = [];
+        $history = $log->iteration_history ?? [];
         return view('admin.kmeans.result', compact('log', 'history'));
     }
 }

@@ -78,39 +78,155 @@
 </div>
 
 @if(!empty($history))
-<div class="card saas-card mt-4">
-    <div class="card-header bg-white pt-4 pb-2 border-bottom-0">
-        <h6 class="fw-bold mb-0">🔄 Riwayat Pergerakan Centroid</h6>
-    </div>
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-bordered mb-0" style="font-size: 0.85rem;">
-                <thead class="bg-light">
-                    <tr>
-                        <th class="ps-4">Iterasi Ke-</th>
-                        <th>Posisi Titik Pusat (Centroid) per Klaster</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach($history as $step)
-                    <tr>
-                        <td class="ps-4 fw-bold">Iterasi {{ $step['iteration'] }}</td>
-                        <td>
-                            @foreach($step['centroids'] as $cIndex => $centroid)
-                                <div class="mb-1">
-                                    <span class="badge bg-secondary">C{{ $cIndex + 1 }}</span>
-                                    <span class="text-muted ms-1">
-                                        [ {{ implode(', ', array_map(function($k, $v) { return $k.': '.round($v, 2); }, array_keys($centroid), $centroid)) }} ]
-                                    </span>
-                                </div>
+    @if(isset($history['initial_centroids']))
+        {{-- NEW FORMAT --}}
+        
+        <h5 class="fw-bold mb-3 mt-5">🎯 Titik Centroid Awal (Initial Centroids)</h5>
+        <div class="card saas-card border-0 shadow-sm mb-4">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 text-center align-middle" style="font-size: 0.9rem;">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Klaster</th>
+                                <th>Dipilih Dari Siswa</th>
+                                <th>Koordinat Awal (Skor Kriteria)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($history['initial_centroids'] as $ic)
+                            <tr>
+                                <td class="ps-4 fw-bold text-primary">C{{ $ic['cluster'] }}</td>
+                                <td>
+                                    <span class="fw-bold text-dark">{{ $ic['name'] }}</span>
+                                    @if($ic['nis'] !== '-')
+                                        <br><small class="text-muted">NIS: {{ $ic['nis'] }}</small>
+                                    @endif
+                                </td>
+                                <td class="text-start">
+                                    @foreach($ic['scores'] as $k => $v)
+                                        <span class="badge bg-light text-dark border me-1 mb-1">{{ $k }}: {{ number_format($v, 2) }}</span>
+                                    @endforeach
+                                </td>
+                            </tr>
                             @endforeach
-                        </td>
-                    </tr>
-                    @endforeach
-                </tbody>
-            </table>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-    </div>
-</div>
+
+        <h5 class="fw-bold mb-3 mt-5">🔄 Riwayat Detail Iterasi</h5>
+        <div class="accordion mb-4" id="accordionHistory">
+            @foreach($history['iterations'] as $step)
+            <div class="accordion-item border-0 shadow-sm mb-2 rounded">
+                <h2 class="accordion-header" id="heading-{{ $step['iteration'] }}">
+                    <button class="accordion-button {{ $loop->last ? '' : 'collapsed' }} fw-bold text-dark rounded" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ $step['iteration'] }}" aria-expanded="{{ $loop->last ? 'true' : 'false' }}" aria-controls="collapse-{{ $step['iteration'] }}">
+                        Iterasi Ke-{{ $step['iteration'] }}
+                    </button>
+                </h2>
+                <div id="collapse-{{ $step['iteration'] }}" class="accordion-collapse collapse {{ $loop->last ? 'show' : '' }}" aria-labelledby="heading-{{ $step['iteration'] }}" data-bs-parent="#accordionHistory">
+                    <div class="accordion-body bg-light">
+                        <div class="row">
+                            @foreach($step['clusters'] as $cluster)
+                            <div class="col-md-4 mb-3">
+                                <div class="card border-0 shadow-sm h-100">
+                                    <div class="card-header bg-white border-bottom-0 pt-3 pb-1">
+                                        <h6 class="fw-bold text-primary mb-0">Klaster {{ $cluster['cluster'] }}</h6>
+                                        <span class="badge bg-secondary mt-1">{{ count($cluster['members']) }} Anggota</span>
+                                    </div>
+                                    <div class="card-body py-2">
+                                        <p class="small fw-bold mb-1 text-muted">Anggota:</p>
+                                        <div class="mb-3" style="max-height: 100px; overflow-y: auto;">
+                                            <ul class="list-unstyled small mb-0">
+                                                @forelse($cluster['members'] as $m)
+                                                    <li class="text-truncate" title="{{ $m['name'] }}">- {{ $m['name'] }}</li>
+                                                @empty
+                                                    <li class="text-danger fst-italic">Kosong</li>
+                                                @endforelse
+                                            </ul>
+                                        </div>
+                                        <p class="small fw-bold mb-1 text-muted">Centroid Baru (Update):</p>
+                                        <div class="">
+                                            @foreach($cluster['new_centroid'] as $k => $v)
+                                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle me-1 mb-1">{{ $k }}: {{ number_format($v, 2) }}</span>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            </div>
+            @endforeach
+        </div>
+
+        <h5 class="fw-bold mb-3 mt-5">🏁 Titik Centroid Akhir (Final Centroids)</h5>
+        <div class="card saas-card border-0 shadow-sm mb-4">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 text-center align-middle" style="font-size: 0.9rem;">
+                        <thead class="bg-primary text-white">
+                            <tr>
+                                <th class="ps-4">Klaster</th>
+                                <th>Koordinat Akhir (Konvergen)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($history['final_centroids'] as $cIndex => $fc)
+                            <tr>
+                                <td class="ps-4 fw-bold text-primary fs-5">C{{ $cIndex + 1 }}</td>
+                                <td class="text-start">
+                                    @foreach($fc as $k => $v)
+                                        <span class="badge bg-light text-dark border me-1 mb-1 fs-6">{{ $k }}: {{ number_format($v, 2) }}</span>
+                                    @endforeach
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    @else
+        {{-- OLD FORMAT (Fallback) --}}
+        <div class="card saas-card mt-4">
+            <div class="card-header bg-white pt-4 pb-2 border-bottom-0">
+                <h6 class="fw-bold mb-0">🔄 Riwayat Pergerakan Centroid (Format Lama)</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered mb-0" style="font-size: 0.85rem;">
+                        <thead class="bg-light">
+                            <tr>
+                                <th class="ps-4">Iterasi Ke-</th>
+                                <th>Posisi Titik Pusat (Centroid) per Klaster</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($history as $step)
+                            <tr>
+                                <td class="ps-4 fw-bold">Iterasi {{ $step['iteration'] }}</td>
+                                <td>
+                                    @foreach($step['centroids'] as $cIndex => $centroid)
+                                        <div class="mb-1">
+                                            <span class="badge bg-secondary">C{{ $cIndex + 1 }}</span>
+                                            <span class="text-muted ms-1">
+                                                [ {{ implode(', ', array_map(function($k, $v) { return $k.': '.round($v, 2); }, array_keys($centroid), $centroid)) }} ]
+                                            </span>
+                                        </div>
+                                    @endforeach
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    @endif
 @endif 
 @endsection
