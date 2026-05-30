@@ -12,6 +12,6 @@ jobs:
       uses: SamKirkland/FTP-Deploy-Action@v4.4.0
       with:
         server: ftp.dcono.my.id
-        username: dheny@dcono.my.id
-        password:  ${{ secrets.ftp_password }}
+        username: skripsi@dcono.my.id
+        password:  ${{ secrets.ftp_password2 }}
     # buat projcet k-means
