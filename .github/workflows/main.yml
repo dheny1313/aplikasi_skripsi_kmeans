@@ -13,4 +13,5 @@ jobs:
       with:
         server: ftp.dcono.my.id
         username: dheny@dcono.my.id
-        password: ftp@DhenyCahyono1313@rumah_web
+        password:  ${{ secrets.ftp_password }}
+    # buat projcet k-means
